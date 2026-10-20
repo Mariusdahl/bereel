@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rowboat Fishing</title>
+<style>
+:root{--bg:#dfe8f5;--ink:#10223a;--panel:#ffffffdd}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1626;--ink:#eaf2ff;--panel:#0b1626dd}}
+:root[data-theme="dark"]{--bg:#0b1626;--ink:#eaf2ff;--panel:#0b1626dd}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:ui-monospace,Menlo,Consolas,monospace;overflow:hidden;touch-action:manipulation}
+body{display:flex;align-items:center;justify-content:center;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#stage{position:relative;height:min(100%,calc(100vw*16/9));aspect-ratio:9/16;max-width:100%}
+canvas{width:100%;height:100%;image-rendering:pixelated;display:block}
+.pb{position:absolute;border-radius:50%;border:4px solid #10223a;cursor:pointer;font:700 clamp(10px,3.2vw,16px) ui-monospace,monospace;color:#fff}
+#btn{left:50%;bottom:5%;transform:translateX(-50%);width:23%;aspect-ratio:1;background:#e8503a;box-shadow:0 5px 0 #7a2418,inset 0 -6px 0 #b7351f}
+#btn:active{transform:translateX(-50%) translateY(4px);box-shadow:0 1px 0 #7a2418,inset 0 -6px 0 #b7351f}
+#btn.wait{background:#5b7fb0;box-shadow:0 5px 0 #2c4466,inset 0 -6px 0 #46678f}
+#btn.bite{background:#f2c230;color:#10223a;box-shadow:0 5px 0 #8a6a00,inset 0 -6px 0 #c9a01a;animation:sh .18s infinite}
+@keyframes sh{0%,100%{margin-left:-2px}50%{margin-left:2px}}
+#bag{right:10%;bottom:7%;width:14%;aspect-ratio:1;background:#c58f3f;box-shadow:0 4px 0 #6b4a1c,inset 0 -5px 0 #a8742c;padding:0;display:flex;align-items:center;justify-content:center}
+#bag:active{transform:translateY(3px);box-shadow:0 1px 0 #6b4a1c,inset 0 -5px 0 #a8742c}
+#bag svg{width:62%;height:62%;shape-rendering:crispEdges}
+#toast{position:absolute;top:17%;left:5%;right:5%;text-align:center;padding:10px;background:var(--panel);border:3px solid #10223a;font-size:clamp(11px,3.4vw,15px);opacity:0;transition:opacity .25s;pointer-events:none}
+#toast.on{opacity:1}
+#buff{top:2%;right:4%;width:10.5%;aspect-ratio:1;background:#3f9b3a;box-shadow:0 4px 0 #1f5a1c,inset 0 -5px 0 #2f7a2c;display:flex;align-items:center;justify-content:center;pointer-events:none}#buff[hidden]{display:none}#buff svg{width:84%;height:84%;shape-rendering:crispEdges}
+#panel,#panel2{position:absolute;left:14%;right:14%;top:44%;transform:translateY(-50%);aspect-ratio:1;background:#ecdcb0;border:4px solid #10223a;border-radius:14px;box-shadow:0 6px 0 #7a5a20,inset 0 -6px 0 #d4c08a;color:#10223a;padding:14px 12px 12px;display:flex;flex-direction:column;gap:8px}
+#panel[hidden],#panel2[hidden]{display:none}
+#panel h2,#panel2 h2{margin:0;font-size:clamp(13px,4vw,18px);letter-spacing:2px}
+#x,#x2{position:absolute;top:-14px;right:-14px;width:34px;height:34px;border-radius:50%;background:#e8503a;box-shadow:0 3px 0 #7a2418,inset 0 -3px 0 #b7351f;font-size:18px;line-height:1;padding:0}
+#x:active,#x2:active{transform:translateY(2px)}
+#grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;align-content:start}
+.tile{position:relative;background:#f7eecf;border:3px solid;border-radius:8px;padding:0;display:flex;align-items:center;justify-content:center;aspect-ratio:1;font:600 clamp(9px,2.8vw,12px) ui-monospace,monospace;color:#10223a;cursor:help;min-height:0}
+.tile.sel{background:#fff;box-shadow:0 0 0 2px #10223a}
+.tile i{font-style:normal;position:absolute;right:5px;bottom:2px;color:#fff;font:700 clamp(10px,3vw,13px) ui-monospace,monospace;text-shadow:1px 1px 0 #10223a,-1px 1px 0 #10223a,1px -1px 0 #10223a,-1px -1px 0 #10223a}
+#detail,#detail2{border:3px solid #10223a;border-radius:8px;background:#f7eecf;padding:8px;font-size:clamp(10px,3vw,13px);min-height:76px;line-height:1.35}
+.ico{width:62%;image-rendering:pixelated;display:block;margin:0 auto}#clv{position:absolute;left:50%;top:50%;width:62%;transform:translate(-50%,-50%);image-rendering:pixelated}#tip{position:absolute;z-index:5;max-width:72%;width:max-content;background:#fff8e0;border:3px solid #10223a;border-radius:8px;box-shadow:0 3px 0 #7a5a20;padding:7px 9px;font-size:clamp(10px,3vw,13px);line-height:1.35;color:#10223a;pointer-events:none}#tip[hidden]{display:none}#eq{left:10%;bottom:7%;width:14%;aspect-ratio:1;background:#5b7fb0;box-shadow:0 4px 0 #2c4466,inset 0 -5px 0 #46678f;padding:0;display:flex;align-items:center;justify-content:center}
+#eq:active{transform:translateY(3px);box-shadow:0 1px 0 #2c4466,inset 0 -5px 0 #46678f}#eq svg{width:62%;height:62%;shape-rendering:crispEdges}
+#slots{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 8px;align-content:start;flex:1}
+.slot{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:clamp(9px,2.8vw,12px);font-weight:700}
+.slot .tile{width:100%;border-color:#8a7a50}.slot .ico{opacity:.4}#bring{position:absolute;left:5%;top:5%;width:90%;height:90%;display:none;pointer-events:none}#btn.bite #bring{display:block}</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c" width="180" height="320"></canvas>
+  <div id="buff" class="pb" hidden><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#1f5a1c" stroke-width="3" opacity=".5"/><circle id="ring" cx="20" cy="20" r="16" fill="none" stroke="#f2c230" stroke-width="3" stroke-dasharray="100.53" stroke-dashoffset="0" transform="rotate(-90 20 20)"/></svg><canvas id="clv" width="16" height="16"></canvas></div>
+  <div id="toast"></div>
+  <button id="btn" class="pb"><svg id="bring" viewBox="0 0 40 40"><circle id="bringc" cx="20" cy="20" r="17" fill="none" stroke="#10223a" stroke-width="3" stroke-dasharray="106.8" transform="rotate(-90 20 20)"/></svg><span id="bt">CAST</span></button>
+  <button id="bag" class="pb" aria-label="Bag"><svg viewBox="0 0 12 12"><rect x="4" y="1" width="4" height="2" fill="#6b4a1c"/><rect x="3" y="3" width="6" height="2" fill="#e0a84c"/><rect x="2" y="4" width="8" height="7" fill="#a8742c"/><rect x="2" y="9" width="8" height="2" fill="#6b4a1c"/><rect x="5" y="6" width="2" height="2" fill="#e8d9b0"/></svg></button>
+  <button id="eq" class="pb" aria-label="Equipment"><svg viewBox="0 0 12 12"><rect x="2" y="1" width="8" height="7" fill="#10223a"/><rect x="0" y="6" width="12" height="4" fill="#10223a"/><rect x="3" y="2" width="6" height="5" fill="#d8b468"/><rect x="1" y="7" width="10" height="2" fill="#d8b468"/><rect x="3" y="5" width="6" height="1" fill="#6a4a24"/><rect x="1" y="8" width="10" height="1" fill="#a8803c"/></svg></button><div id="tip" hidden></div><div id="panel2" hidden><button id="x2" class="pb">×</button><h2>EQUIPMENT</h2><div id="slots"></div></div><div id="panel" hidden><button id="x" class="pb">×</button><h2>BAG</h2><div id="grid"></div></div>
+</div>
+<script>
+const BITE_MIN=5,BITE_MAX=14,REEL_TIME=0.45,DASH_ON=1,DASH_OFF=2,BITE_WINDOW=1.0,CAST_TIME=1.0;
+const BOTTLE_MIN=3,BOTTLE_MAX=8,BUFF_SECONDS=60;
+const RARITY_BASE={legendary:1,rare:3,uncommon:21,common:75};
+const RARITY_BUFF={legendary:3,rare:9,uncommon:28,common:60};
+const COLORS={common:'#8a97a8',uncommon:'#2fa84a',rare:'#2f7fe0',legendary:'#e59a12'};
+// Placeholder loot: [name, description]
+const LOOT={};
+{const P=(r,a)=>a.map(x=>{const[n,...z]=x.split('|');return r==='legendary'?{n,tag:z[0],eff:z[1]}:{n,d:z[0]}});
+LOOT.legendary=P('legendary',[
+'Celestial Bamboo Pole|Player Gear · Rod|Cuts base hook/bite time down by 3 seconds.',
+'Crown of the Abyssal King|Player Gear · Headwear|Doubles your base Legendary catch chance from 1% to 2% by converting 1% of your Common drop chance (Common reduced from 75% to 74%).',
+'Poseidon’s Golden Hook|Player Gear · Hook|Automatically reels in the fish when hooked.',
+'Siren’s Charm Lure|Player Gear · Lure|Shifts base rarity odds by boosting Rare catches from 3% to 6% and Uncommon from 21% to 25% (lowering Common catch rate from 75% to 68%).',
+'Neptune’s Trident Rod|Player Gear · Rod|Periodically catches extra fish, completely automated, by lightning striking random places on the water.',
+'Phantom Pirate’s Hat|Player Gear · Hat|Grants a 15% chance to hook two fish at once on a single bite, processing two separate loot rolls simultaneously.',
+'Tide-Weaver Ring|Player Gear · Ring|Doubles the spawn rate of messages in a bottle.',
+'Sunken Sovereign Figurehead|Boat Exterior · Prow Mount|Triggers small tremors at random intervals from the boat. If you throw your line during a tremor, you are guaranteed a rare drop.',
+'Phantom Trolling Anchor|Boat Equipment · Slot|An ethereal anchor for the back of the boat. Spawns ghosts at random intervals that catch fish for you (normal rarity rolls). After they catch a fish you have to click the ghost to get the loot.',
+'Anglerfish Bow Lantern|Boat Exterior · Rail Mount|Allows normal catch times during night.']);
+LOOT.rare=P('rare',[
+'Golden Koi|An exquisite fish covered in glittering gold scales that reflect light like pure treasure.',
+'Ancient Mariner’s Compass|A tarnished brass compass pointing toward long-lost underwater ruins.',
+'Message in a Crystal Bottle|A sealed glass bottle containing a glowing, indecipherable map.',
+'Bioluminescent Jellyfish|A violet-tinted floating organism preserved inside a spherical water bulb.',
+'Sunken Doubloon Pouch|A soggy leather pouch bursting with ancient pirate currency.',
+'Petrified Dragon Egg|A heavy, stone-hard egg covered in barnacles dredged up from the ocean floor.']);
+LOOT.uncommon=P('uncommon',[
+'Rainbow Trout|A vibrant freshwater fish that glimmers with a full spectrum of colors in the sunlight.',
+'Sponge-Moss Clam|An oversized clam draped in fuzzy green moss, hiding a dim river pearl.',
+'Electric Catfish|Sparks tiny, harmless jolts of static electricity when held.',
+'Waterlogged Map|Smudged parchment showing a faint "X" marked along an unknown shoreline.',
+'Glass Buoy Float|A vintage green glass sphere wrapped in knotted nautical rope.',
+'Spotted Pufferfish|Inflates into a tiny spiked ball when pulled out of the water.',
+'Old Boot with Hermit Crab|A muddy leather boot harboring a tiny, defensive crab inside.',
+'Tangled Lamprey|A squirming, slippery eel-like creature that wriggles constantly in your pack.']);
+LOOT.common=P('common',[
+'Soggy Driftwood|A smooth, water-soaked branch that smells faintly of salt.',
+'Rusty Tin Can|An empty soup can missing its label.',
+'Common Carp|A standard, mud-colored freshwater fish found almost anywhere.',
+'Green Seaweed|A slippery clump of kelp pulled directly from the riverbed.',
+'Small Bluegill|A tiny, palm-sized fish common in shallow ponds.',
+'Snagged Fishing Line|A tangled mess of monofilament line and rusted hooks.',
+'Old Rubber Tire|Heavy, muddy, and completely useless.',
+'Freshwater Bass|A reliable catch for entry-level anglers.',
+'Smooth River Pebble|An extraordinarily flat stone, perfect for skipping across ponds.',
+'Frayed Anchor Rope|A short, useless segment of thick hemp line.',
+'Plastic Water Bottle|A discarded plastic bottle half-filled with murky water.',
+'Crayfish|A little red freshwater crustacean clicking its tiny claws.',
+'Broken Wooden Oar|The snapped blade of an old rowboat paddle.',
+'Sardine|A tiny, oily fish usually found swimming in large schools.']);}
+const ORDER=['legendary','rare','uncommon','common'];
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const W=180,H=320,btn=document.getElementById('btn'),toast=document.getElementById('toast');
+const R=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h)};
+const rnd=(a,b)=>a+Math.random()*(b-a),lerp=(a,b,u)=>a+(b-a)*u;
+let state='idle',tState=0,biteAt=0,castT0=0,buffUntil=0,toastT=null,rock=0,sel=null;
+let ripples=[],drops=[],bottle=null,nextBottle=performance.now()+rnd(BOTTLE_MIN,BOTTLE_MAX)*60000;
+const bobber={x:130,y:200,onBoat:false},inv={};
+let release=null,target=null,reelT0=0,reelItem=null;
+
+function say(m,c){toast.textContent=m;toast.style.borderColor=c||'#10223a';toast.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>toast.classList.remove('on'),2600)}
+function buzz(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+function setBtn(t,c){document.getElementById('bt').textContent=t;btn.className='pb '+(c||'')}
+function rollLoot(){
+  const tb=performance.now()<buffUntil?RARITY_BUFF:RARITY_BASE;let r=Math.random()*100,rar='common';
+  for(const k of ORDER){if(r<tb[k]){rar=k;break}r-=tb[k]}
+  const it=LOOT[rar][Math.floor(Math.random()*LOOT[rar].length)];return{rar,name:it.n,desc:it.d||'',tag:it.tag||'',eff:it.eff||''};
+}
+btn.addEventListener('pointerdown',e=>{
+  e.preventDefault();const now=performance.now();
+  if(state==='idle'){
+    state='casting';castT0=now;release=null;setBtn('...','wait');
+    target={x:rnd(20,160),y:rnd(188,245)};
+  }else if(state==='waiting'){state='idle';setBtn('CAST');say('Pulled too early. Nothing yet.')}
+  else if(state==='bite'){
+    reelItem=rollLoot();reelT0=now;state='reeling';setBtn('...','wait');splash(bobber.x,bobber.y);
+  }
+});
+function splash(x,y){ripples.push({x,y,r:1,a:1});for(let i=0;i<6;i++)drops.push({x,y,vx:rnd(-25,25),vy:rnd(-45,-20),l:1})}
+const BOAT={x0:48,x1:116};
+let boatY=150;
+cv.addEventListener('pointerdown',e=>{
+  const b=cv.getBoundingClientRect(),x=(e.clientX-b.left)/b.width*W,y=(e.clientY-b.top)/b.height*H;
+  if(bottle&&Math.hypot(x-bottle.x,y-(bottle.y+bottle.bob))<14){
+    bottle=null;buffUntil=performance.now()+BUFF_SECONDS*1000;buzz(80);
+    say('Message: “Fair winds ahead.” Rarer catches for '+BUFF_SECONDS+'s!','#e59a12');scheduleBottle();splash(x,y);return;
+  }
+  if(x>BOAT.x0&&x<BOAT.x1+4&&y>boatY-22&&y<boatY+26){rock=1;return}
+  if(y>H*0.1)splash(x,y);
+});
+function scheduleBottle(){nextBottle=performance.now()+rnd(BOTTLE_MIN,BOTTLE_MAX)*60000}
+
+// ---- Bag UI ----
+const panel=document.getElementById('panel'),grid=document.getElementById('grid'),detail=document.getElementById('detail');
+document.getElementById('bag').onclick=()=>{if(panel.hidden){panel.hidden=false;panel2.hidden=true;render()}else{panel.hidden=true;tip.hidden=true}};
+document.getElementById('x').onclick=()=>{panel.hidden=true;tip.hidden=true};
+const buffEl=document.getElementById('buff'),ring=document.getElementById('ring'),bringc=document.getElementById('bringc');
+{const g=document.getElementById('clv').getContext('2d'),CL=["................", "....kkkkkkkk....", "....klmddlmk....", "....kmmddmmk....", ".kkkkkkddkkkkkk.", ".klmk..kk..klmk.", ".kmmk..kk..kmmk.", ".kdddkk..kkdddk.", ".kdddkk..kddddk.", ".klmk..kkddllmk.", ".kmmk..kdddmmmk.", ".kkkkkkddlkkmmk.", "....klmddlmkdd..", "....kmmddmmmddd.", "....kkkkkkkk.dd.", "................"],CP={"k": "#2f5a14", "d": "#4f8c1f", "m": "#76c43a", "l": "#a4e85c"};
+CL.forEach((row,y)=>{for(let x=0;x<16;x++){const k=CP[row[x]];if(k){g.fillStyle=k;g.fillRect(x,y,1,1)}}})}
+const FISH=['..........','...FFF....','..BBBBB.T.','.BEBBBBBTT','.BBBBBBBT.','.VVVVVVBTT','..VVVV..T.','....F.....'];
+const PAL={k:'#2a2a35',w:'#f4f8fc',g:'#9aa7b8',G:'#5b6678',s:'#c9d4e0',y:'#f2c230',Y:'#c9951a',o:'#e8872a',r:'#e8442a',R:'#a82a1a',n:'#8a5a2c',N:'#5a3a1a',t:'#c9a26a',l:'#4aa83a',L:'#2f7a24',b:'#3f7fd8',B:'#2a5aa8',c:'#7fd6c8',C:'#bfe8e0',p:'#f2c9a0',v:'#8a4ad8',V:'#c99aff',m:'#d86ab0',e:'#e0d8b8',h:'#6a8a5a'};
+const fish=(B,V,F)=>['..FFF...','.BBBBBT.','BEBBBBTT','BBBBBBBT','.VVVVBTT','..VVV.T.'].map(r=>[...r].map(c=>({B,V,F,T:F,E:'k'}[c]||c)).join('')).join('/');
+const DEF={
+'Celestial Bamboo Pole':'......y./.....lL./....lL../...lL.../..lL..../.lL...../lL....../L.......',
+'Crown of the Abyssal King':'y..y..y./yy.yy.yy/yyyyyyyy/yYbYYrYy/yyyyyyyy/YYYYYYYY',
+'Poseidon’s Golden Hook':'...yy.../...yY.../...yY.../...yY.../y..yY.../yy.yY.../.yyyY.../..yy....',
+'Siren’s Charm Lure':fish('m','V','c'),
+'Neptune’s Trident Rod':'b..b..b./bb.b.bb./.bbbbb../..bB..../..bB..../..bB..../..bB..../..bB....',
+'Phantom Pirate’s Hat':'/..kkkk../.kkwwkk./kkkwwkkk/kyyyyyyk/.kkkkkk.',
+'Tide-Weaver Ring':'...cC.../..yyyy../.yY..Yy./.y....y./.yY..Yy./..yyyy..',
+'Sunken Sovereign Figurehead':'..y.y.y./..yyyyy./...ppp../...ppp../..bbbbb./.nnbbbnn/nnnnnnnN/NNNNNNNN',
+'Phantom Trolling Anchor':'...CC.../...CC.../.CCCCCC./...CC.../...CC.../C..CC..C/CC.CC.CC/.CCCCCC.',
+'Anglerfish Bow Lantern':'...yy.../..kkkk../.kyyyyk./.kywwyk./.kyyyyk./..kkkk../...kk...',
+'Golden Koi':fish('y','w','o'),
+'Ancient Mariner’s Compass':'..kkkk../.kYyyYk./kyyyyryk/kyyyrwyk/kywrywyk/kyyyyyyk/.kYyyYk./..kkkk..',
+'Message in a Crystal Bottle':'...nn.../..kCCk../..kCCk../.kCeeCk./.kCeeCk./.kCeeCk./..kCCk../...kk...',
+'Bioluminescent Jellyfish':'..vvvv../.vVVVVv./vVVwVVVv/vvvvvvvv/.v.v.v../v..v..v./.v.v.v..',
+'Sunken Doubloon Pouch':'..nNNn../...nn.../..nnnn../.nnyynn./nnnyynnn/nnnnnnnn/.NNNNNN.',
+'Petrified Dragon Egg':'...gg.../..gggg../.gGggGg./gggggggg/gGggwggG/gggggGgg/.gggggg./..gggg..',
+'Rainbow Trout':fish('c','w','m'),
+'Sponge-Moss Clam':'..hhhh../.hlhhlh./hhhhhhhh/gggggggg/gsgsgsgs/.gsgsgs./..gggg..',
+'Electric Catfish':fish('G','g','y'),
+'Waterlogged Map':'eeeeeeee/ennneeee/eeeeeeee/eerereee/eeereeee/eerereee/eeeeeeee/eeeeeeee',
+'Glass Buoy Float':'...tt.../..LLLL../.LlwllL./LllllllL/LllllllL/.LllllL./..LLLL..',
+'Spotted Pufferfish':'..y..y../.yyyyyy./yykyyyoo/yyyyyyoo/yYyYyYyy/yyyyyyyy/.yyyyyy./..y..y..',
+'Old Boot with Hermit Crab':'..nn..../..nn..../..nN..../..nNn.../.nnNnnrr/nnnnnnrR/NNNNNNNN',
+'Tangled Lamprey':'.ggggg../g.....g./g.....g./.ggggg../......g./g.....g./.ggggg..',
+'Soggy Driftwood':'......nn/....nnNn/..nnNnn./nnNnnn../nnnNn...',
+'Rusty Tin Can':'.kkkkkk./kooooook/koRoooRk/kooooook/kRooooRk/.kkkkkk.',
+'Common Carp':fish('n','t','N'),
+'Green Seaweed':'..l...../..lL..l./.lL..lL./.lL..lL./.LlLlL.l/..lLlL.L/..LlL.L./..LLL.LL',
+'Small Bluegill':fish('b','o','B'),
+'Snagged Fishing Line':'.w..w.w./w..ww..w/.ww..ww./..gw..w./.w..gg.w/w.ww..w.',
+'Old Rubber Tire':'..kkkk../.kGGGGk./kGkkkkGk/kGk..kGk/kGkkkkGk/.kGGGGk./..kkkk..',
+'Freshwater Bass':fish('l','e','L'),
+'Smooth River Pebble':'......../..gggg../.ggwggg./gggggggG/Gggggggg/.GGGGGG.',
+'Frayed Anchor Rope':'..tttt../.tnttnt./tn....nt/t.tttt.t/tn....nt/.tnttnt./..tttt../....t.t.',
+'Plastic Water Bottle':'...bb.../..kCCk../..kCCk../.kCCCCk./.kCbbCk./.kCbbCk./.kCCCCk./..kkkk..',
+'Crayfish':'r.r..r.r/rr....rr/.rrrrrr./..rRRr../..rrrr../.rRrrRr./..rrrr../..r..r..',
+'Broken Wooden Oar':'......nn/.....nNn/....nNn./...nNn../..nnn.../..nn..../nnnn..../nn......',
+'Sardine':fish('s','w','g')
+};
+const SPR={};
+Object.entries(DEF).forEach(([n,v])=>{const r=v.split('/').map(x=>x.padEnd(8,'.').slice(0,8));while(r.length<8)r.push('........');SPR[n]=[r,PAL]});
+function icon(name){
+  const [rows,pal]=SPR[name],c=document.createElement('canvas');c.width=Math.max(...rows.map(r=>r.length));c.height=rows.length;c.className='ico';
+  const g=c.getContext('2d');rows.forEach((row,y)=>{for(let x=0;x<row.length;x++){const k=pal[row[x]];if(k){g.fillStyle=k;g.fillRect(x,y,1,1)}}});return c;
+}
+const tip=document.getElementById('tip'),stage=document.getElementById('stage'),panel2=document.getElementById('panel2');
+function placeTip(t,html){tip.innerHTML=html;tip.hidden=false;
+  const sr=stage.getBoundingClientRect(),tr=t.getBoundingClientRect(),w=tip.offsetWidth;
+  const l=Math.max(w/2+6,Math.min(sr.width-w/2-6,tr.left-sr.left+tr.width/2)),above=tr.top-sr.top>tip.offsetHeight+14;
+  tip.style.left=l+'px';tip.style.top=(above?tr.top-sr.top-6:tr.bottom-sr.top+6)+'px';tip.style.transform=above?'translate(-50%,-100%)':'translate(-50%,0)'}
+Object.assign(SPR,{
+'slot:Rod':[['........kk','......kkk.','.....kk...','....kk....','...kk.....','..kk......','.nn.......','nn........'],{k:'#3a2a20',n:'#8a5a2c'}],
+'slot:Hat':[['..........','...kkkk...','..kaaaak..','..kbbbbk..','kkkkkkkkkk','kaaaaaaaak','.kkkkkkkk.','..........'],{k:'#6a4a24',a:'#d8b468',b:'#a8803c'}],
+'slot:Hook':[['....ss....','....ss....','....ss....','....ss....','s...ss....','ss..ss....','.ssss.....','..........'],{s:'#b8c6d6'}],
+'slot:Lure':[FISH,{B:'#e8442a',V:'#f4f8fc',F:'#c9951a',T:'#c9951a',E:'#1c1c28'}],
+'slot:Ring':[['....rr....','...kkkk...','..kyyyyk..','.ky....yk.','.ky....yk.','..kyyyyk..','...kkkk...','..........'],{k:'#6a4a10',y:'#f2c230',r:'#e8442a'}],
+'slot:Boat':[['..........','....kk....','...kwwk...','kkkkkkkkkk','.gggggggg.','..gGGGGg..','...kkkk...','..........'],{k:'#1b3a10',w:'#f4f8fc',g:'#3f8a2b',G:'#2a6420'}]
+});
+[['Rod','Your fishing rod.'],['Hat','Headwear. Legendary hats will go here.'],['Hook','Hooks could change bite times.'],['Lure','Lures could attract better fish.'],['Ring','A ring with a special trait.'],['Boat','Boat accessories.']].forEach(([n,d])=>{
+  const w=document.createElement('div');w.className='slot';const t=document.createElement('div');t.className='tile';t.appendChild(icon('slot:'+n));w.appendChild(t);
+  const l=document.createElement('span');l.textContent=n;w.appendChild(l);
+  const show=()=>placeTip(t,'<b>'+n+'</b><br>Empty slot<br>'+d);
+  t.addEventListener('pointerenter',show);t.addEventListener('pointerdown',show);t.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')tip.hidden=true});
+  document.getElementById('slots').appendChild(w)});
+document.getElementById('eq').onclick=()=>{tip.hidden=true;if(panel2.hidden){panel2.hidden=false;panel.hidden=true}else panel2.hidden=true};
+document.getElementById('x2').onclick=()=>{panel2.hidden=true;tip.hidden=true};
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.tile'))tip.hidden=true});
+function render(){
+  grid.innerHTML='';tip.hidden=true;const items=Object.values(inv).sort((a,b)=>ORDER.indexOf(a.rar)-ORDER.indexOf(b.rar));
+  if(!items.length)grid.innerHTML='<div style="grid-column:1/-1;font-size:12px;opacity:.7">Nothing caught yet. Go fish!</div>';
+  items.forEach(it=>{const t=document.createElement('div');t.className='tile';t.style.borderColor=COLORS[it.rar];
+    t.appendChild(icon(it.name));const b=document.createElement('i');b.textContent=it.n;t.appendChild(b);
+    const show=()=>{tip.innerHTML='<b style="color:'+COLORS[it.rar]+'">'+it.name+'</b><br>'+it.rar+' · '+it.n+' caught'+(it.tag?'<br>'+it.tag:'')+(it.eff?'<br><b>Effect:</b> '+it.eff:'')+(it.desc?'<br>'+it.desc:'');tip.hidden=false;
+      const sr=stage.getBoundingClientRect(),tr=t.getBoundingClientRect(),w=tip.offsetWidth;
+      const l=Math.max(w/2+6,Math.min(sr.width-w/2-6,tr.left-sr.left+tr.width/2)),above=tr.top-sr.top>tip.offsetHeight+14;
+      tip.style.left=l+'px';tip.style.top=(above?tr.top-sr.top-6:tr.bottom-sr.top+6)+'px';tip.style.transform=above?'translate(-50%,-100%)':'translate(-50%,0)'};
+    t.addEventListener('pointerenter',show);t.addEventListener('pointerdown',show);
+    t.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')tip.hidden=true});grid.appendChild(t)});
+}
+
+// ---- Loop ----
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;
+  if(state==='casting'&&now-castT0>=CAST_TIME*1000){
+    state='waiting';biteAt=now+rnd(BITE_MIN,BITE_MAX)*1000;setBtn('...','wait');
+    bobber.x=target.x;bobber.y=target.y;splash(bobber.x,bobber.y);
+  }
+  if(state==='reeling'&&now-reelT0>=REEL_TIME*1000){
+    const f=reelItem;say(f.rar.toUpperCase()+': '+f.name,COLORS[f.rar]);(inv[f.name]=inv[f.name]||{...f,n:0}).n++;
+    if(f.rar==='legendary')buzz([60,40,60,40,200]);state='idle';setBtn('CAST');
+  }
+  if(state==='waiting'&&now>=biteAt){state='bite';tState=now;buzz([250,60,250,60,250]);setBtn('REEL!','bite')}
+  if(state==='bite')bringc.style.strokeDashoffset=106.8*Math.min(1,(now-tState)/(BITE_WINDOW*1000));
+  if(state==='bite'&&now-tState>BITE_WINDOW*1000){state='idle';setBtn('CAST');say('It got away...')}
+  if(!bottle&&now>=nextBottle)bottle={x:-10,y:rnd(225,255),bob:0};
+  if(bottle){bottle.x+=12*dt;bottle.bob=Math.sin(t*2.5)*1.5;if(bottle.x>W+12){bottle=null;scheduleBottle()}}
+  ripples.forEach(r=>{r.r+=22*dt;r.a-=dt*1.1});ripples=ripples.filter(r=>r.a>0);
+  drops.forEach(d=>{d.x+=d.vx*dt;d.y+=d.vy*dt;d.vy+=130*dt;d.l-=dt*2});drops=drops.filter(d=>d.l>0);
+  rock=Math.max(0,rock-dt*0.8);
+  const bl=Math.max(0,(buffUntil-now)/1000);
+  buffEl.hidden=bl<=0;ring.style.strokeDashoffset=100.53*(1-bl/BUFF_SECONDS);
+  draw(t,now);requestAnimationFrame(loop);
+}
+const BANDS=['#7bb8f2','#72aeee','#69a5ea','#609ce5','#5792df','#4e88d8','#467fd0','#3e76c8'];
+const ease=u=>u*u*(3-2*u);
+const seq=(p,a,b,c)=>p<.4?lerp(a,b,ease(p/.4)):p<.55?lerp(b,c,ease((p-.4)/.15)):lerp(c,a,ease((p-.55)/.45));
+let DASH=false,dn=0;
+function line(x0,y0,x1,y1,c){x0=Math.round(x0);y0=Math.round(y0);x1=Math.round(x1);y1=Math.round(y1);const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy;for(;;){if(!DASH||(dn++%4)<2)R(x0,y0,1,1,c);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}}
+function curve(a,m,b,c){
+  const len=Math.hypot(m[0]-a[0],m[1]-a[1])+Math.hypot(b[0]-m[0],b[1]-m[1]),n=Math.ceil(len*2)+2,pts=[];let px=null,py=null;
+  for(let k=0;k<=n;k++){const u=k/n,v=1-u,x=Math.round(v*v*a[0]+2*v*u*m[0]+u*u*b[0]),y=Math.round(v*v*a[1]+2*v*u*m[1]+u*u*b[1]);
+    if(x!==px||y!==py){pts.push([x,y]);px=x;py=y}}
+  pts.forEach((p,k)=>{if(!DASH||(k%(DASH_ON+DASH_OFF))<DASH_ON)R(p[0],p[1],1,1,c)});
+}
+function sprite(rows,pal,x,y,off){rows.forEach((row,r)=>{const o=off?off(r):0;for(let c=0;c<row.length;c++){const k=pal[row[c]];if(k)R(x+c+o,y+r,1,1,k)}})}
+const MAN=["....cccccc....", "...ccCccccc...", "...ccccccccp..", "...ccppppppP..", "...cppppeppP..", "...cppppppppP.", "....ppppppPP..", ".....PPPPPP...", ".....pPPPP....", "....uhhhhhH...", "...uhhhhhhhH..", "...uhhhhhhhH..", "...uhhhhhhhH..", "...uhhhhhhhH..", "...uhhhhhhhH..", "...uhhhhhhhH..", "...uhhhhhhhH..", "...uhhhhhhhH..", "...uhhhhhhhH..", "...uhhhhhhhH..", "...uhhhhhhhH..", "...uhhhhhhhH.."];
+const MANP={"c": "#5a3a22", "C": "#3a2414", "p": "#f2c9a0", "P": "#d9a97e", "e": "#222222", "h": "#8a5a32", "u": "#b07a48", "H": "#5e3a1e"};
+function draw(t,now){
+  for(let i=0;i<BANDS.length;i++)R(0,i*40,W,40,BANDS[i]);
+  for(let y=14;y<H;y+=9){const dir=(y/9|0)%2?1:-1;
+    for(let i=0;i<5;i++){const x=((i*47+y*13+t*6*dir)%(W+20)+W+20)%(W+20)-10;R(x,y,12,1,'#a6d8f4');R(x+4,y+1,6,1,'#468ac4')}}
+  for(let i=0;i<14;i++){if(Math.sin(t*2+i*7)>0.85)R((i*53)%W,(i*79)%H,1,1,'#ffffff')}
+  const by=Math.round(Math.sin(t*1.6)*1.5)+150;boatY=by;
+  const ox=Math.round(Math.cos(now/1000*14)*rock*1.5),oy=Math.round(Math.sin(now/1000*14)*rock*2);
+  const casting=state==='casting',reeling=state==='reeling',p=casting?(now-castT0)/(CAST_TIME*1000):0;
+  const q=reeling?Math.min(1,(now-reelT0)/(REEL_TIME*1000)):0,rf=reeling?Math.sin(Math.min(1,q/.35)*Math.PI/2)*(1-ease(Math.max(0,(q-.6)/.4))):0;
+  const lean=casting?seq(p,0,-2,2):reeling?-2.2*rf:state==='bite'?1+Math.round(Math.sin(t*40)):0;
+  const hdy=casting?seq(p,0,-4,2):reeling?-3*rf+Math.sin(q*34)*rf:0;
+  R(52,by+24,62,3,'#3d6fb8');R(56,by+27,54,1,'#4a82cc');
+  for(let i=0;i<8;i++){R(54+i*8+Math.round(Math.sin(t*2+i)*2),by+23,5,1,'#e8f4ff')}
+  ctx.save();ctx.translate(ox,oy);
+  const mx=71;
+  sprite(MAN,MANP,mx,by-12,r=>Math.round(r<9?lean:r<16?lean/2:0));
+  for(let i=0;i<14;i++){
+    const x0=54+Math.floor(i*0.45),x1=116-Math.floor(i*0.9),y=by+10+i;
+    R(x0,y,x1-x0,1,i<2?'#6cc04a':i===6?'#2f7020':i<9?'#3f8a2b':'#2a6420');
+  }
+  R(54,by+10,62,1,'#8ad66a');R(60,by+8,8,2,'#e8eef5');R(86,by+8,22,2,'#e8eef5');R(60,by+8,8,1,'#fff');
+  R(50,by+6,5,16,'#3b2a1a');R(50,by+6,2,16,'#5a4026');
+  const sx=mx+11+Math.round(lean/2),sy=by-1,hx=86+Math.round(lean*1.5)+(reeling?Math.round(Math.cos(q*34)*rf):0),hy=by+3+Math.round(hdy);
+  line(sx,sy,hx,hy,'#8a5a32');line(sx,sy+1,hx,hy+1,'#5e3a1e');R(hx,hy-1,2,2,'#f2c9a0');
+  const a=casting?seq(p,-1.07,-1.8,-.45):reeling?-1.07-0.4*rf:-1.07,bx0=hx+1,by0=hy-1,L=40;
+  const tr=[bx0+L*Math.cos(a),by0+L*Math.sin(a)],bend=casting&&p>0.3&&p<0.7?5:reeling?2+4*rf:2;
+  const mid=[(bx0+tr[0])/2+Math.sin(a)*bend,(by0+tr[1])/2-Math.cos(a)*bend];
+  curve([bx0,by0],mid,tr,'#4a2f22');R(bx0-1,by0,3,2,'#c9951a');
+  ctx.restore();
+  const tip=[tr[0]+ox,tr[1]+oy];
+  let lx,ly;
+  if(casting){
+    if(p<0.5){lx=tip[0];ly=tip[1]+10}
+    else{if(!release)release={x:tip[0],y:tip[1]+10};
+      const u=(p-0.5)/0.5;lx=lerp(release.x,target.x,u);ly=lerp(release.y,target.y,u)-Math.sin(u*Math.PI)*45}
+  }else if(state==='idle'){lx=tip[0];ly=tip[1]+8}
+  else if(reeling){const u=ease(q);lx=lerp(bobber.x,tip[0],u);ly=lerp(bobber.y,tip[1]+6,u)-Math.sin(u*Math.PI)*14}
+  else{lx=bobber.x;ly=bobber.y}
+  let dip=0;if(state==='bite')dip=2+Math.round(Math.sin(t*40)*2);else if(state==='waiting')dip=Math.round(Math.sin(t*2));
+  ly+=dip;
+  if(state!=='idle'){DASH=true;curve(tip,[(tip[0]+lx)/2,Math.max(tip[1],ly)+(casting?0:5)],[lx,ly],'#eef3fa');DASH=false}
+  if(state!=='idle'){lx=Math.round(lx);ly=Math.round(ly);R(lx-2,ly-2,4,4,'#fff');R(lx-2,ly-2,4,2,'#e8442a');R(lx-2,ly,4,1,'#c9d4e0');
+    if(state==='bite'){R(lx-1,ly-14,2,6,'#f2c230');R(lx-1,ly-6,2,2,'#f2c230')}}
+  if(reeling&&q>0.12){const sp=SPR[reelItem.name];sprite(sp[0],sp[1],Math.round(lx)-5,Math.round(ly)+3)}
+  if(bottle){const y=bottle.y+bottle.bob;R(bottle.x-1,y-6,3,2,'#a0713a');R(bottle.x-2,y-4,5,8,'#bfe8e0');R(bottle.x-2,y-4,1,8,'#e8fbf6');R(bottle.x-1,y-2,3,4,'#f4e7c1');R(bottle.x-3,y+4,7,1,'#4a82cc')}
+  ripples.forEach(r=>{ctx.globalAlpha=Math.max(0,r.a);const n=Math.max(16,Math.round(r.r*5));for(let i=0;i<n;i++){const th=i/n*6.283;R(r.x+r.r*Math.cos(th),r.y+r.r*.45*Math.sin(th),1,1,'#fff')}ctx.globalAlpha=1});
+  drops.forEach(d=>R(d.x,d.y,2,2,'#e8f4ff'));
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
